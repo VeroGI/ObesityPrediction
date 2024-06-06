@@ -1,0 +1,17 @@
+Name,Feature,Values
+Age,Age,Numeric value
+Height,Height,Numeric value in m
+Weight,Weight,Numeric value in k
+History,Family history of overweight,Yes / No
+FAVC,Eat high-caloric food frequently,Yes / No
+FCVC,Vegetables consumption frequency,Never / Sometimes / Always
+NCP,Number of main meals daily,Between 1 and 2 / 3/ More than 3
+CAEC,Consumption of food between meals,No / Sometimes / Frequently / Always
+Smoke,Smoking,Yes / No
+CH2O,Liquid intake daily,Less than a liter / Between 1 and 2 L / More than 2 L
+SCC,Calorie consumption monitoring,Yes / No
+FAF,Physical activity,I do not have / 1 or 2 days / 2 or 4 days / 4 or 5 days
+TUE,Time using technological devices,0–2 h / 3–5 h / More than 5 h
+CALC,Alcohol consumption,No / Sometimes / Frequently / Always
+MTRANS,Type of transportation used,Automobile / Motorbike / Bike / Public transportation / Walking
+Nobeyesdad,Obesity level category,Underweight / Normal weight / Overweight Level I / Overweight Level II / Obesity Type I / Obesity Type II / Obesity Type III

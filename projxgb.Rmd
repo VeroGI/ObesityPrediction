@@ -1,0 +1,306 @@
+---
+title: "Overweight prediction with XGBoost"
+Author: Verónica González Ibarra
+output:
+   html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidymodels) 
+library(xgboost)
+library(vip)
+library(skimr)
+library(DT)
+
+knitr::opts_chunk$set(echo=TRUE)
+```
+
+In this project, I aim to predict the development of overweight and obesity. To achieve this, I will employ the XGBoost algorithm and fine-tune its hyperparameters to optimize the model's performance. The analysis will be conducted within the `tidymodels` framework. Data set available at <https://archive.ics.uci.edu/dataset/544/estimation+of+obesity+levels+based+on+eating+habits+and+physical+condition>.
+      
+
+### Exploring data
+
+```{r}
+#Obesity <- read.csv('C:/Users/veron/Documents/Project_xgboost/ObesityDataSet.csv')
+Obesity <- read.csv('ObesityDataSet.csv')
+options(warn = -1)
+head(Obesity)
+```
+
+##### Overview of the dataset’s characteristics
+
+```{r}
+# Features and values/categories
+table <- read.csv("table.csv")
+datatable(table)
+```
+
+```{r}
+skim_without_charts(Obesity)
+```
+
+##### Exploring the unique values of non numerical and numerical variables
+
+```{r}
+
+non_numeric_columns <- Obesity[, !sapply(Obesity, is.numeric)]
+non_numeric_columns
+numeric_columns <- Obesity[, sapply(Obesity, is.numeric)]
+numeric_columns
+
+```
+
+##### BMI recategorization
+
+```{r}
+
+Obesity <- Obesity %>% 
+  mutate(BMI = Weight / (Height * Height))
+categories <- c("Underweight", "Normal", "Overweight", "Obesity_type_I", "Obesity_type_II", "Obesity_type_III")
+limits_BMI <- c(0, 18.5, 24.9, 29.9, 34.9, 39.9, Inf)
+
+BMI_class <- function(bmi) {
+  category <- cut(bmi, breaks = limits_BMI, labels = categories)
+  return(category)
+}
+
+Obesity <- Obesity %>%
+  mutate(BMI_category = BMI_class(BMI))
+
+# Variable 'NObeyesdad' is eliminated
+Obesity <- Obesity %>%
+  select(-NObeyesdad)
+
+# Checking if the dataset has been modified
+head(Obesity)
+```
+
+##### Checking if classes are balanced
+
+```{r}
+frec_ns <- Obesity %>%
+  count(BMI_category)
+
+ggplot(frec_ns, aes(x = BMI_category, y = n)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  labs(title = "Body Weight Category",
+       x = "Category",
+       y = "Frequency") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+# I decided to remove the weight variable because the labels are calculated from it, I also removed BMI because it is used categorized.
+Obesity <- Obesity %>%
+  select(-Weight, -BMI)
+
+```
+
+##### Due to their encoding with numeric values rather than words, certain categorical variables are currently being interpreted as numeric. It is necessary to convert them into factors to ensure their correct interpretation by the model.
+
+```{r}
+Obesity <- Obesity %>%
+  mutate(
+    FCVC = as.factor(FCVC),
+    NCP = as.factor(NCP),
+    TUE = as.factor(TUE),
+    CH2O = as.factor(CH2O),
+    FAF = as.factor(FAF)
+  )
+
+```
+
+### Split into train y test
+
+```{r}
+set.seed(123)
+o_split <- Obesity %>% 
+  initial_split(prop = 0.75, strata = BMI_category)
+o_train <- training(o_split)
+o_test <- testing(o_split)
+```
+
+### Definition and preparation of a data preprocessing recipe
+
+```{r}
+recipe_dt <- recipe(BMI_category~., data = o_train) %>%
+  step_corr(all_numeric_predictors()) %>% #elimino las correlaciones
+  step_center(all_numeric_predictors(), -all_outcomes()) %>% #centrado
+  step_scale(all_numeric_predictors(), -all_outcomes()) %>% #escalado
+  step_dummy(all_nominal_predictors())
+
+prepared_recipe <- recipe_dt %>% prep()
+prepared_recipe
+```
+
+### Tuning
+
+```{r}
+# Model specifications
+
+xgb_spec <- boost_tree(
+  trees = 1000,
+  tree_depth = tune(), min_n = tune(),
+  loss_reduction = tune(),                     ## first three: model complexity
+  sample_size = tune(), mtry = tune(),         ## randomness
+  learn_rate = tune()                          ## step size
+) %>%
+  set_engine("xgboost") %>%
+  set_mode("classification")
+
+xgb_spec
+```
+
+##### Creating a grid of Potential Hyperparameter Values. Space-filling design to thoroughly explore the hyperparameter space.
+
+```{r}
+
+xgb_grid <- grid_latin_hypercube(
+  tree_depth(),
+  min_n(),
+  loss_reduction(),
+  sample_size = sample_prop(),
+  finalize(mtry(), o_train),
+  learn_rate(),
+  size = 10
+)
+
+xgb_grid
+```
+
+```{r}
+# Workflow creation
+
+xgb_wf <- workflow() %>%
+  add_formula(BMI_category~.) %>% 
+  add_model(xgb_spec)
+
+xgb_wf
+```
+
+```{r}
+# Validation
+o_folds <- vfold_cv(juice(prepared_recipe), strata = BMI_category)
+```
+
+##### Finding the optimal hyperparameter configuration that maximizes model performance.
+
+```{r}
+doParallel::registerDoParallel()
+
+set.seed(234)
+xgb_res <- tune_grid(
+  xgb_wf,
+  resamples = o_folds,
+  grid = xgb_grid,
+  control = control_grid(save_pred = TRUE)
+)
+
+xgb_res
+```
+
+```{r}
+# Collect and summarize performance metrics for all hyperparameter combinations tested during the tuning process
+
+collect_metrics(xgb_res)
+```
+
+##### Visualization of the impact of the different hyperparameters on the performance of the model (average variation of the AUC)
+
+```{r}
+
+xgb_res %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  select(mean, mtry:sample_size) %>%
+  pivot_longer(mtry:sample_size,
+               values_to = "value",
+               names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(alpha = 0.8, show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "AUC")
+```
+
+##### Selecting and showing the best combination of hyperparameters from the tuning results using the ROC AUC as the performance metric.
+
+```{r}
+best_auc <- select_best(xgb_res, metric = "roc_auc")
+show_best(xgb_res, metric = "roc_auc")
+
+```
+
+```{r}
+#The finalize_workflow() function is used to update a workflow with the best hyperparameter values
+
+final_xgb <- finalize_workflow(
+  xgb_wf,
+  best_auc
+)
+
+final_xgb
+
+```
+
+### Fitting the XGBoost model
+
+```{r}
+final_xgb %>%
+  fit(juice(prepared_recipe)) %>%  #data extracted from the prepared_recipe object
+  pull_workflow_fit() %>%
+  vip(geom = "point")
+
+```
+
+```{r}
+# last_fit() emulates the process where, after determining the best model, the final fit on the entire training set is needed and is then evaluated on the test set
+
+final_res <- last_fit(final_xgb, o_split)
+collect_metrics(final_res)
+```
+
+```{r}
+# Prediction collection
+predictions <- final_res %>%
+  collect_predictions()
+
+# Confusion matrix
+predictions %>%
+  conf_mat(BMI_category, .pred_class)
+
+```
+
+```{r}
+# Calculation of ROC curves for each class
+roc_curve_data <- predictions %>%
+  roc_curve(truth = BMI_category,
+            .pred_Underweight,
+            .pred_Normal,
+            .pred_Overweight,
+            .pred_Obesity_type_I,
+            .pred_Obesity_type_II,
+            .pred_Obesity_type_III)
+
+autoplot(roc_curve_data)
+```
+
+### Conclusion
+
+The dataset contains 17 attributes and 2111 records from individuals from Mexico, Peru, and Colombia. 23% of the data was collected directly from users through a web platform and 77% was generated synthetically using the Weka tool and the SMOTE filter (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6710633/>). For this analysis, it was decided to recategorize the BMI variable, since it was not interesting to have two overweight categories. Another possible categorization would have been to group the 3 obesity categories into one, which will remain pending for a future analysis. It was also decided not to use the weight variable, as it strongly correlates with BMI.
+
+The model presents an acceptable general performance (AUC 0.86), although it can be observed that the greater the degree of excess weight, the better the model's ability to classify the corresponding category.
+
+After analyzing data, it was observed that the main predictors of excess weight are male sex, family history of overweight, and age, all non-modifiable risk factors.
+
+```{r}
+
+#rmarkdown::render("projxgb.Rmd", output_file = "Obesity_final.html")
+
+#rmarkdown::render("projxgb.Rmd", output_file = "Obesity_final.pdf")
+```
+
+
