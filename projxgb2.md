@@ -94,86 +94,6 @@ Data summary
 | FAF           |         0 |             1 |  1.01 |  0.85 |  0.00 |  0.12 |  1.00 |   1.67 |   3.00 |
 | TUE           |         0 |             1 |  0.66 |  0.61 |  0.00 |  0.00 |  0.63 |   1.00 |   2.00 |
 
-##### Exploring the unique values of non-numerical variables and descriptive statistics of numerical variables
-
-``` r
-non_numeric_columns <- Obesity[, !sapply(Obesity, is.numeric)]
-numeric_columns <- Obesity[, sapply(Obesity, is.numeric)]
-cat("Unique values Non numerical variables:\n")
-```
-
-    ## Unique values Non numerical variables:
-
-``` r
-lapply(non_numeric_columns, unique)
-```
-
-    ## $Gender
-    ## [1] "Female" "Male"  
-    ## 
-    ## $family_history_with_overweight
-    ## [1] "yes" "no" 
-    ## 
-    ## $FAVC
-    ## [1] "no"  "yes"
-    ## 
-    ## $CAEC
-    ## [1] "Sometimes"  "Frequently" "Always"     "no"        
-    ## 
-    ## $SMOKE
-    ## [1] "no"  "yes"
-    ## 
-    ## $SCC
-    ## [1] "no"  "yes"
-    ## 
-    ## $CALC
-    ## [1] "no"         "Sometimes"  "Frequently" "Always"    
-    ## 
-    ## $MTRANS
-    ## [1] "Public_Transportation" "Walking"               "Automobile"           
-    ## [4] "Motorbike"             "Bike"                 
-    ## 
-    ## $NObeyesdad
-    ## [1] "Normal_Weight"       "Overweight_Level_I"  "Overweight_Level_II"
-    ## [4] "Obesity_Type_I"      "Insufficient_Weight" "Obesity_Type_II"    
-    ## [7] "Obesity_Type_III"
-
-``` r
-lapply(numeric_columns, summary)
-```
-
-    ## $Age
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   14.00   19.95   22.78   24.31   26.00   61.00 
-    ## 
-    ## $Height
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   1.450   1.630   1.700   1.702   1.768   1.980 
-    ## 
-    ## $Weight
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   39.00   65.47   83.00   86.59  107.43  173.00 
-    ## 
-    ## $FCVC
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   1.000   2.000   2.386   2.419   3.000   3.000 
-    ## 
-    ## $NCP
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   1.000   2.659   3.000   2.686   3.000   4.000 
-    ## 
-    ## $CH2O
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   1.000   1.585   2.000   2.008   2.477   3.000 
-    ## 
-    ## $FAF
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##  0.0000  0.1245  1.0000  1.0103  1.6667  3.0000 
-    ## 
-    ## $TUE
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##  0.0000  0.0000  0.6253  0.6579  1.0000  2.0000
-
 ##### BMI recategorization
 
 ``` r
@@ -235,7 +155,7 @@ ggplot(frec_ns, aes(x = BMI_category, y = n)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-![](projxgb2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](projxgb2_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
 # I decided to remove the weight variable because the labels are calculated from it, I also removed BMI because it is used categorized.
@@ -479,7 +399,7 @@ xgb_res %>%
   labs(x = NULL, y = "AUC")
 ```
 
-![](projxgb2_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](projxgb2_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ##### Selecting and showing the best combination of hyperparameters from the tuning results using the ROC AUC as the performance metric.
 
@@ -540,7 +460,7 @@ final_xgb %>%
   vip(geom = "point")
 ```
 
-![](projxgb2_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](projxgb2_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 # last_fit() emulates the process where, after determining the best model, the final fit on the entire training set is needed and is then evaluated on the test set
@@ -604,7 +524,7 @@ roc_curve_data <- predictions %>%
 autoplot(roc_curve_data)
 ```
 
-![](projxgb2_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](projxgb2_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 ### Conclusion
 

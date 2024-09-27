@@ -42,17 +42,6 @@ datatable(table)
 skim_without_charts(Obesity)
 ```
 
-##### Exploring the unique values of non-numerical variables and descriptive statistics of numerical variables
-
-```{r}
-
-non_numeric_columns <- Obesity[, !sapply(Obesity, is.numeric)]
-numeric_columns <- Obesity[, sapply(Obesity, is.numeric)]
-cat("Unique values Non numerical variables:\n")
-lapply(non_numeric_columns, unique)
-lapply(numeric_columns, summary)
-```
-
 ##### BMI recategorization
 
 ```{r}
