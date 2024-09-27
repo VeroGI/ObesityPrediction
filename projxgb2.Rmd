@@ -2,7 +2,9 @@
 title: "Overweight prediction with XGBoost"
 Author: Verónica González Ibarra
 output:
-   html_document:
+  github_document: default
+  pdf_document: default
+  html_document:
     df_print: paged
 ---
 
@@ -13,7 +15,7 @@ library(vip)
 library(skimr)
 library(DT)
 
-knitr::opts_chunk$set(echo=TRUE)
+knitr::opts_chunk$set(  echo = TRUE,  screenshot.force = TRUE)
 ```
 
 In this project, I aim to predict the development of overweight and obesity. To achieve this, I will employ the XGBoost algorithm and fine-tune its hyperparameters to optimize the model's performance. The analysis will be conducted within the `tidymodels` framework. Data set available at <https://archive.ics.uci.edu/dataset/544/estimation+of+obesity+levels+based+on+eating+habits+and+physical+condition>.
@@ -32,7 +34,7 @@ head(Obesity)
 
 ```{r}
 # Features and values/categories
-table <- read.csv("table.csv")
+table <- read.csv("table (2).csv")
 datatable(table)
 ```
 
@@ -40,15 +42,15 @@ datatable(table)
 skim_without_charts(Obesity)
 ```
 
-##### Exploring the unique values of non numerical and numerical variables
+##### Exploring the unique values of non-numerical variables and descriptive statistics of numerical variables
 
 ```{r}
 
 non_numeric_columns <- Obesity[, !sapply(Obesity, is.numeric)]
-non_numeric_columns
 numeric_columns <- Obesity[, sapply(Obesity, is.numeric)]
-numeric_columns
-
+cat("Unique values Non numerical variables:\n")
+lapply(non_numeric_columns, unique)
+lapply(numeric_columns, summary)
 ```
 
 ##### BMI recategorization
